@@ -7,7 +7,6 @@ import android.os.Parcel
 import android.util.Log
 import com.stardust.autojs.AutoJs
 import com.stardust.autojs.IndependentScriptService
-import com.stardust.autojs.core.shizuku.ShizukuClient
 import com.stardust.autojs.execution.ExecutionConfig
 import com.stardust.autojs.script.ScriptFile
 import com.stardust.autojs.script.ScriptSource
@@ -30,11 +29,7 @@ class ScriptBinder(service: IndependentScriptService, val scope: CoroutineScope)
                 Action.STOP_ALL_SCRIPT.id -> stopAllScript()
                 Action.REGISTER_GLOBAL_SCRIPT_LISTENER.id -> registerGlobalScriptListener(data)
                 Action.REGISTER_GLOBAL_CONSOLE_LISTENER.id -> registerGlobalConsoleListener(data)
-                Action.NOTIFICATION_LISTENER_SERVICE_STATUS.id -> notificationListenerServiceStatus(
-                    reply!!
-                )
-
-                Action.BIND_SHIZUKU_SERVICE.id -> bindShizukuUserService()
+                Action.NOTIFICATION_LISTENER_SERVICE_STATUS.id -> notificationListenerServiceStatus(reply!!)
                 else -> Log.w(TAG, "unknown action id = $code")
             }
             Log.d(TAG, "action id = $code, complete")
@@ -103,12 +98,6 @@ class ScriptBinder(service: IndependentScriptService, val scope: CoroutineScope)
         reply.writeInt(if (NotificationListenerService.instance != null) 1 else 0)
     }
 
-    private fun bindShizukuUserService() {
-        if (ShizukuClient.instance.shizukuConnection.service == null) {
-            ShizukuClient.instance.bindService()
-        }
-    }
-
     enum class Action(val id: Int) {
         START(1),
         STOP(2),
@@ -119,7 +108,6 @@ class ScriptBinder(service: IndependentScriptService, val scope: CoroutineScope)
         REGISTER_GLOBAL_SCRIPT_LISTENER(7),
         REGISTER_GLOBAL_CONSOLE_LISTENER(8),
         NOTIFICATION_LISTENER_SERVICE_STATUS(9),
-        BIND_SHIZUKU_SERVICE(10);
     }
 
     companion object {

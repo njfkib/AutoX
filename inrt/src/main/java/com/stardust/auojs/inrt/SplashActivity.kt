@@ -258,7 +258,7 @@ class SplashActivity : AppCompatActivity() {
 
     private fun requestExternalStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !PermissionUtil.checkStoragePermission()) {
-            PermissionUtil.showPermissionDialog(this) {
+            PermissionUtil.showPermissionDialog(this){
                 storagePermissionLauncher.launch(Unit)
             }
         } else checkSpecialPermissions()
@@ -315,19 +315,17 @@ class SplashActivity : AppCompatActivity() {
             dismissOnBackPress = false
         )
 
-        override fun show() {
-            lifecycleScope.launch {
-                val enabled = withContext(Dispatchers.IO) {
-                    AccessibilityServiceTool1.enableAccessibilityServiceByRootAndWaitFor(2000)
-                }
-                if (enabled) {
-                    permissionsResult[Permissions.ACCESSIBILITY_SERVICES] = true
-                    toast(this@SplashActivity, R.string.text_accessibility_service_turned_on)
-                    checkSpecialPermissions()
-                    return@launch
-                }
-                super.show()
+        override suspend fun show() {
+            val enabled = withContext(Dispatchers.IO) {
+                AccessibilityServiceTool1.enableAccessibilityServiceByRootAndWaitFor(2000)
             }
+            if (enabled) {
+                permissionsResult[Permissions.ACCESSIBILITY_SERVICES] = true
+                toast(this@SplashActivity, R.string.text_accessibility_service_turned_on)
+                checkSpecialPermissions()
+                return
+            }
+            super.show()
         }
 
         @Composable

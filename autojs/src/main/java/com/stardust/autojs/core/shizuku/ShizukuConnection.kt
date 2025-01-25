@@ -7,9 +7,9 @@ import android.os.RemoteException
 import android.util.Log
 import kotlinx.coroutines.Job
 
-open class ShizukuConnection : ServiceConnection {
+class ShizukuConnection : ServiceConnection {
     var service: IShizukuUserService? = null
-    var binder = Job().apply { completeExceptionally(RemoteException("Shizuku service unavailable")) }
+    var binder = Job()
 
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
         Log.d(TAG, "onServiceConnected service: $service")
@@ -20,7 +20,7 @@ open class ShizukuConnection : ServiceConnection {
     override fun onServiceDisconnected(name: ComponentName?) {
         service = null
         binder = Job().apply {
-            completeExceptionally(RemoteException("Shizuku service disconnected"))
+            completeExceptionally(RemoteException("Shizuku服务断开"))
         }
     }
 

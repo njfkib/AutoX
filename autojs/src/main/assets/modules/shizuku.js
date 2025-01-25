@@ -9,7 +9,3 @@ exports = module.exports = function(cmd){
 exports.createShell = function() {
 
 }*/
-
-exports.isAlive = function(){
-    return __runtime.shell.isShizukuAlive();
-}

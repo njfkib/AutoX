@@ -16,29 +16,13 @@ fun CheckboxOption(
     value: KMutableProperty0<Boolean>,
     name: String
 ) {
-    CheckboxOption(
-        modifier = modifier,
-        checked = value.get(),
-        onCheckedChange = { value.set(it) },
-        name = name
-    )
-}
-
-@Composable
-fun CheckboxOption(
-    modifier: Modifier = Modifier,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit = {},
-    name: String
-) {
     Row(
-        modifier = modifier.clickable { onCheckedChange(!checked) },
+        modifier = modifier.clickable { value.set(!value.get()) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
+            checked = value.get(),
+            onCheckedChange = { value.set(it) })
         Text(text = name)
     }
 }
