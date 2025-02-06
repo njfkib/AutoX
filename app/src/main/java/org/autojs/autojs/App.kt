@@ -19,12 +19,9 @@ import com.aiselp.autox.engine.NodeScriptEngine.Companion.initModuleResource
 import com.aiselp.autox.ui.material3.activity.ErrorReportActivity
 import com.stardust.app.GlobalAppContext
 import com.stardust.autojs.core.pref.PrefKey
-import com.stardust.autojs.servicecomponents.EngineController
 import com.stardust.autojs.servicecomponents.ScriptServiceConnection
 import com.stardust.autojs.util.ProcessUtils
 import com.stardust.theme.ThemeColor
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.autojs.autojs.autojs.AutoJs
 import org.autojs.autojs.autojs.key.GlobalKeyObserver
 import org.autojs.autojs.external.receiver.DynamicBroadcastReceivers
@@ -45,6 +42,9 @@ class App : Application(), Configuration.Provider {
     lateinit var dynamicBroadcastReceivers: DynamicBroadcastReceivers
         private set
 
+    init {
+        ShizukuProvider.enableMultiProcessSupport(false)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -81,13 +81,10 @@ class App : Application(), Configuration.Provider {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 WebView.setDataDirectorySuffix(getString(R.string.text_script_process_name))
             };
-        } else if (ProcessUtils.isMainProcess(this)) {
+        } else {
+            ShizukuProvider.requestBinderForNonProviderProcess(this)
             ScriptServiceConnection.start(this)
             initResource()
-            EngineController.scope.launch {
-                delay(1000)
-                ShizukuProvider.requestBinderForNonProviderProcess(this@App)
-            }
         }
         Log.i(
             TAG, "Pid: ${Process.myPid()}, isScriptProcess: ${ProcessUtils.isScriptProcess(this)}"
@@ -161,12 +158,9 @@ class App : Application(), Configuration.Provider {
 
     companion object {
         private const val TAG = "App"
+        private const val BUGLY_APP_ID = "19b3607b53"
 
         private lateinit var instance: WeakReference<App>
-
-        init {
-            ShizukuProvider.enableMultiProcessSupport(false)
-        }
 
         val app: App
             get() = instance.get()!!

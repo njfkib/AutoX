@@ -2,18 +2,14 @@ package com.stardust.autojs.core.shizuku
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
-import android.os.IBinder
+import android.os.RemoteException
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.stardust.app.GlobalAppContext
 import com.stardust.autojs.BuildConfig
-import com.stardust.autojs.servicecomponents.ScriptServiceConnection
-import com.stardust.autojs.util.ProcessUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import rikka.shizuku.Shizuku
@@ -24,22 +20,11 @@ class ShizukuClient private constructor() : Shizuku.OnRequestPermissionResultLis
     Shizuku.OnBinderDeadListener, Shizuku.OnBinderReceivedListener {
 
     private val scope = CoroutineScope(Dispatchers.Main)
+    var shizukuConnection: ShizukuConnection? = null
     private var packageName: String? = null
 
     var available: Boolean by mutableStateOf(false)
     var userPermission: Boolean by mutableStateOf(false)
-    val shizukuConnection: ShizukuConnection = object : ShizukuConnection() {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            super.onServiceConnected(name, service)
-            scope.launch { available = true }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            super.onServiceDisconnected(name)
-            scope.launch { available = false }
-        }
-
-    }
 
     init {
         scope.launch {
@@ -66,69 +51,59 @@ class ShizukuClient private constructor() : Shizuku.OnRequestPermissionResultLis
     }
 
     fun setupService(packageName: String) = scope.launch {
-        if (available) {
+        if (available && shizukuConnection == null) {
             bindService(packageName)
         }
         this@ShizukuClient.packageName = packageName
     }
 
+    fun checkConnection() {
+        checkNotNull(shizukuConnection) { RemoteException("Shizuku未连接") }
+    }
+
     suspend fun ensureShizukuService(): IShizukuUserService {
-        if (shizukuConnection.service == null && available && checkPermission()) {
-            bindService(packageName!!)
-        }
-        return withTimeout(2000) {
-            var exception: Throwable? = null
-            shizukuConnection.binder.invokeOnCompletion {
-                exception = it
-            }
-            shizukuConnection.binder.join()
-            if (exception != null) throw exception as Throwable
-            shizukuConnection.service!!
+        checkConnection()
+        return withTimeout(1000) {
+            shizukuConnection!!.binder.join()
+            shizukuConnection!!.service!!
         }
     }
 
 
-    fun bindService(packageName: String = this.packageName!!) {
+    fun bindService(packageName: String) {
         Log.d(TAG, "bindService")
-        if (!checkPermission()) {
-            return
-        }
         val userServiceArgs = UserServiceArgs(
             ComponentName(packageName, ShizukuUserService::class.java.getName())
         )
-            .daemon(true)
+            .daemon(false)
             .processNameSuffix("service")
             .debuggable(BuildConfig.DEBUG)
             .version(BuildConfig.VERSION_CODE)
-        shizukuConnection.binder = Job()
-        Shizuku.bindUserService(userServiceArgs, shizukuConnection)
+        shizukuConnection = ShizukuConnection()
+        Shizuku.bindUserService(userServiceArgs, shizukuConnection!!)
     }
 
     override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
         if (requestCode == REQUEST_CODE) {
-            scope.launch {
-                userPermission = grantResult == PackageManager.PERMISSION_GRANTED
-                if (ProcessUtils.isMainProcess(GlobalAppContext.get()))
-                    ScriptServiceConnection.GlobalConnection.bindShizukuUserService()
-            }
+            scope.launch { userPermission = grantResult == PackageManager.PERMISSION_GRANTED }
         }
     }
 
     override fun onBinderDead() {
         Log.d(TAG, "onBinderDead")
         scope.launch {
-            available = false
+            available = true
+            if (shizukuConnection == null && packageName != null) {
+                bindService(packageName!!)
+            }
         }
     }
 
     override fun onBinderReceived() {
         Log.d(TAG, "onBinderReceived")
         scope.launch {
-            available = true
-            userPermission = checkPermission()
-            if (packageName != null) {
-                bindService(packageName!!)
-            }
+            available = false
+            shizukuConnection = null
         }
     }
 

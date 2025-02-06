@@ -51,13 +51,12 @@ data class GithubReleaseInfo(
  * @return Returns null if targetCommitish is prerelease or not "dev-test"
  */
 fun GithubReleaseInfo.isLatestVersion(): Boolean? {
-    if (prerelease) return null
-    return this.name.getVersionByName() <= BuildConfig.VERSION_CODE
+    if (targetCommitish != "dev-test" || prerelease) return null
+    return this.name.getVersionByName() <= BuildConfig.VERSION_NAME.getVersionByName()
 }
 
 private fun String.getVersionByName(): Long {
-    return Regex("\\d").findAll(this).map { it.value }
-        .joinToString("").toLongOrNull() ?: -1
+    return this.replace(".", "").toLongOrNull() ?: -1
 }
 
 data class Asset(

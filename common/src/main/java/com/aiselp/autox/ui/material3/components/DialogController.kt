@@ -25,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 open class DialogController(
     open val properties: DialogProperties = DialogProperties(),
@@ -35,7 +37,7 @@ open class DialogController(
         protected set
 
     open fun onShow() {}
-    open fun show() {
+    open suspend fun show() = withContext(Dispatchers.Main) {
         showState = true
         onShow()
     }
@@ -45,7 +47,7 @@ open class DialogController(
     open fun onNeutralClick() {}
 
     open fun onDismiss() {}
-    open fun dismiss() {
+    open suspend fun dismiss() = withContext(Dispatchers.Main) {
         showState = false
         onDismiss()
     }
